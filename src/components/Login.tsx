@@ -2,6 +2,13 @@ import { signInWithPopup } from "firebase/auth";
 import { User } from "../types";
 import { auth, provider } from "../config/firebase";
 
+// Set authorization scopes for Google sign-in
+provider.addScope('email');
+provider.addScope('profile');
+provider.setCustomParameters({
+  prompt: 'select_account'
+});
+
 interface LoginProps {
   onLogin?: (user: User) => void;
 }
