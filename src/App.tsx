@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './config/firebase';
 import AuthPage from './components/AuthPage';
 import MainApp from './components/MainApp';
 import AdminDashboard from './components/AdminDashboard';
@@ -9,22 +12,38 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem('shopEliteUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userData: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || 'Elite',
+          lastName: firebaseUser.displayName?.split(' ')[1] || 'Customer',
+          createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+          isAdmin: firebaseUser.email === 'admin@shopelitesource.com',
+          emailVerified: firebaseUser.emailVerified
+        };
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-    localStorage.setItem('shopEliteUser', JSON.stringify(userData));
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('shopEliteUser');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   if (isLoading) {
@@ -36,23 +55,29 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {user ? (
-        user.isAdmin ? (
-          <AdminDashboard 
-            user={user} 
-            onLogout={handleLogout}
-          />
-        ) : (
-          <MainApp 
-            user={user} 
-            onLogout={handleLogout}
-          />
-        )
-      ) : (
-        <AuthPage onLogin={handleLogin} />
-      )}
-    </div>
+    <Router>
+      <div className="min-h-screen bg-black text-white">
+        <Routes>
+          <Route path="/*" element={
+            user ? (
+              user.isAdmin ? (
+                <AdminDashboard 
+                  user={user} 
+                  onLogout={handleLogout}
+                />
+              ) : (
+                <MainApp 
+                  user={user} 
+                  onLogout={handleLogout}
+                />
+              )
+            ) : (
+              <AuthPage onLogin={handleLogin} />
+            )
+          } />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

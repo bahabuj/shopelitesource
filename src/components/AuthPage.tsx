@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Login from './Login';
 import { User } from '../types';
 import { Lock, Mail, User as UserIcon, Eye, EyeOff } from 'lucide-react';
+import { auth } from '../config/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -42,65 +45,49 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Check for admin credentials
-    const isAdminLogin = formData.email === 'admin@shopelitesource.com' && formData.password === 'admin123';
-    
-    if (isLogin) {
-      // Login flow - check if user exists and is verified
-      setTimeout(() => {
-        const userData: User = isAdminLogin ? {
-          id: 'admin-001',
-          email: formData.email,
-          firstName: 'Admin',
-          lastName: 'User',
-          createdAt: new Date().toISOString(),
-          isAdmin: true,
-          emailVerified: true
-        } : {
-          id: Math.random().toString(36).substr(2, 9),
-          email: formData.email,
-          firstName: 'Elite',
-          lastName: 'Customer',
-          createdAt: new Date().toISOString(),
-          isAdmin: false,
-          emailVerified: true
-        };
-        onLogin(userData);
-        setIsLoading(false);
-      }, 1500);
-    } else {
-      // Sign up flow - direct registration
-      setTimeout(() => {
+    try {
+      if (isLogin) {
+        // Login flow
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        const firebaseUser = userCredential.user;
+        
         const userData: User = {
-          id: Math.random().toString(36).substr(2, 9),
-          email: formData.email,
-          firstName: formData.firstName || 'Elite',
-          lastName: formData.lastName || 'Customer',
-          createdAt: new Date().toISOString(),
-          isAdmin: false,
-          emailVerified: true
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || 'Elite',
+          lastName: firebaseUser.displayName?.split(' ')[1] || 'Customer',
+          createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+          isAdmin: formData.email === 'admin@shopelitesource.com',
+          emailVerified: firebaseUser.emailVerified
         };
         
         onLogin(userData);
-        setIsLoading(false);
-      }, 1500);
+      } else {
+        // Sign up flow
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const firebaseUser = userCredential.user;
+        
+        const userData: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+          isAdmin: false,
+          emailVerified: firebaseUser.emailVerified
+        };
+        
+        onLogin(userData);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      // Handle specific error cases here
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    const redirectUri = 'https://shopeliteresource.com/api/auth/google/callback';
-    const googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-      client_id: '55706393904-nop51cvk14ptbkdsv4rc0ducfvetq08n.apps.googleusercontent.com',
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'openid email profile',
-      access_type: 'offline',
-      prompt: 'select_account'
-    });
-    
-    console.log('Redirecting to Google OAuth:', googleAuthUrl);
-    window.location.href = googleAuthUrl;
-  };
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -178,6 +165,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           </div>
 
           {/* Google Sign In */}
+          <Login onLogin={onLogin} />
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 text-gray-400 bg-[#000000cc]">Or continue with email</span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
