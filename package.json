@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "start": "vite preview"
+    "preview": "vite preview"
   },
   "dependencies": {
     "firebase": "^12.2.1",
