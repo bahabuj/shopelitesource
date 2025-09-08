@@ -19,19 +19,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setCurrentView('edit-product');
   };
 
-  const handleSaveProduct = (productData: Omit<Product, 'id'>) => {
-    if (editingProduct) {
-      updateProduct(editingProduct.id, productData);
-      setEditingProduct(null);
-    } else {
-      addProduct(productData);
+  const handleSaveProduct = async (productData: Omit<Product, 'id'>) => {
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+        console.log('Product updated successfully');
+        // Verify storage update
+        const storedProducts = localStorage.getItem('shopEliteProducts');
+        console.log('Current products in storage:', storedProducts ? JSON.parse(storedProducts) : 'No products found');
+        setEditingProduct(null);
+      } else {
+        const newProduct = await addProduct(productData);
+        console.log('New product added successfully:', newProduct);
+        // Verify storage update
+        const storedProducts = localStorage.getItem('shopEliteProducts');
+        console.log('Current products in storage:', storedProducts ? JSON.parse(storedProducts) : 'No products found');
+      }
+      setCurrentView('products');
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Failed to save product. Please try again.');
     }
-    setCurrentView('products');
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(id);
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      if (confirm('Are you sure you want to delete this product?')) {
+        await deleteProduct(id);
+        console.log('Product deleted successfully');
+        // Verify storage update
+        const storedProducts = localStorage.getItem('shopEliteProducts');
+        console.log('Current products in storage after deletion:', storedProducts ? JSON.parse(storedProducts) : 'No products found');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Failed to delete product. Please try again.');
     }
   };
 

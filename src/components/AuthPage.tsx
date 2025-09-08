@@ -20,6 +20,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     lastName: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   // Luxury fashion background images
   const backgroundImages = [
@@ -57,9 +58,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           firstName: firebaseUser.displayName?.split(' ')[0] || 'Elite',
           lastName: firebaseUser.displayName?.split(' ')[1] || 'Customer',
           createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-          isAdmin: formData.email === 'admin@shopelitesource.com',
+          isAdmin: formData.email.toLowerCase() === 'admin@shopelitesource.com',
           emailVerified: firebaseUser.emailVerified
         };
+        
+        console.log('Login successful:', userData);
         
         onLogin(userData);
       } else {
@@ -79,9 +82,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         
         onLogin(userData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Authentication error:', error);
-      // Handle specific error cases here
+      if (error.code === 'auth/wrong-password') {
+        setError('Incorrect password. Please try again.');
+      } else if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +101,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(''); // Clear any previous error messages
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -143,7 +155,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           </div>
           <div className="flex mb-6">
             <button
-              onClick={() => setIsLogin(true)}
+              onClick={() => {
+                setIsLogin(true);
+                setError('');
+                setFormData(prev => ({ ...prev, firstName: '', lastName: '' }));
+              }}
               className={`flex-1 py-3 text-center font-medium transition-all duration-300 ${
                 isLogin 
                   ? 'text-gold border-b-2 border-gold' 
@@ -153,7 +169,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               SIGN IN
             </button>
             <button
-              onClick={() => setIsLogin(false)}
+              onClick={() => {
+                setIsLogin(false);
+                setError('');
+                setFormData(prev => ({ ...prev, password: '' }));
+              }}
               className={`flex-1 py-3 text-center font-medium transition-all duration-300 ${
                 !isLogin 
                   ? 'text-gold border-b-2 border-gold' 
@@ -176,6 +196,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
             </div>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm text-center">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div className="grid grid-cols-2 gap-4">

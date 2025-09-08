@@ -19,13 +19,18 @@ function Login({ onLogin }: LoginProps) {
       const result = await signInWithPopup(auth, provider);
       if (onLogin) {
         const firebaseUser = result.user;
+        // Check if the user is admin
+        const isAdmin = firebaseUser.email?.toLowerCase() === 'admin@shopelitesource.com';
+        console.log('Google login - Email:', firebaseUser.email);
+        console.log('Google login - Is Admin:', isAdmin);
+        
         const userData: User = {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
           firstName: firebaseUser.displayName?.split(' ')[0] || 'Elite',
           lastName: firebaseUser.displayName?.split(' ')[1] || 'Customer',
           createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-          isAdmin: firebaseUser.email === 'admin@shopelitesource.com',
+          isAdmin: isAdmin,
           emailVerified: firebaseUser.emailVerified
         };
         onLogin(userData);

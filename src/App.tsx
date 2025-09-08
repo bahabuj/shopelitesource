@@ -20,7 +20,7 @@ function App() {
           firstName: firebaseUser.displayName?.split(' ')[0] || 'Elite',
           lastName: firebaseUser.displayName?.split(' ')[1] || 'Customer',
           createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-          isAdmin: firebaseUser.email === 'admin@shopelitesource.com',
+          isAdmin: firebaseUser.email?.toLowerCase() === 'admin@shopelitesource.com',
           emailVerified: firebaseUser.emailVerified
         };
         setUser(userData);

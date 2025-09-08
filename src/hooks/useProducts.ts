@@ -6,62 +6,107 @@ export const useProducts = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading from backend
     const loadProducts = () => {
-      setTimeout(() => {
-        const savedProducts = localStorage.getItem('shopEliteProducts');
-        if (savedProducts) {
-          setProducts(JSON.parse(savedProducts));
-        } else {
-          // Initialize with empty array - admin can add products
-          setProducts([]);
-        }
-        setIsLoading(false);
-      }, 1000);
+      const savedProducts = localStorage.getItem('shopEliteProducts');
+      if (savedProducts) {
+        const parsedProducts = JSON.parse(savedProducts);
+        console.log('Loading products from storage:', parsedProducts);
+        setProducts(parsedProducts);
+      } else {
+        console.log('No products found in storage, initializing empty array');
+        setProducts([]);
+      }
+      setIsLoading(false);
     };
 
     loadProducts();
+
+    // Add storage event listener for real-time updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'shopEliteProducts' && e.newValue) {
+        const updatedProducts = JSON.parse(e.newValue);
+        console.log('Storage event detected - Updating products:', updatedProducts);
+        setProducts(updatedProducts);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    // Validate promo pricing
-    if (product.isPromo && product.originalPrice && product.originalPrice <= product.price) {
-      throw new Error('Original price must be higher than promo price');
-    }
-    
-    const newProduct: Product = {
-      ...product,
-      id: Date.now().toString(),
-      reviews: [] // Initialize with empty reviews array
-    };
-    
-    const updatedProducts = [...products, newProduct];
-    setProducts(updatedProducts);
-    localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
-    return newProduct;
-  };
-
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    // Validate promo pricing for updates
-    const existingProduct = products.find(p => p.id === id);
-    if (existingProduct) {
-      const updatedProduct = { ...existingProduct, ...updates };
-      if (updatedProduct.isPromo && updatedProduct.originalPrice && updatedProduct.originalPrice <= updatedProduct.price) {
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    try {
+      // Validate promo pricing
+      if (product.isPromo && product.originalPrice && product.originalPrice <= product.price) {
         throw new Error('Original price must be higher than promo price');
       }
+      
+      const newProduct: Product = {
+        ...product,
+        id: Date.now().toString(),
+        reviews: []
+      };
+      
+      const updatedProducts = [...products, newProduct];
+      setProducts(updatedProducts); // Update state immediately
+      localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
+      
+      // Trigger storage event manually for other components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'shopEliteProducts',
+        newValue: JSON.stringify(updatedProducts)
+      }));
+      
+      return newProduct;
+    } catch (error) {
+      console.error('Error adding product:', error);
+      throw error;
     }
-    
-    const updatedProducts = products.map(product =>
-      product.id === id ? { ...product, ...updates } : product
-    );
-    setProducts(updatedProducts);
-    localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
   };
 
-  const deleteProduct = (id: string) => {
-    const updatedProducts = products.filter(product => product.id !== id);
-    setProducts(updatedProducts);
-    localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    try {
+      // Validate promo pricing for updates
+      const existingProduct = products.find(p => p.id === id);
+      if (existingProduct) {
+        const updatedProduct = { ...existingProduct, ...updates };
+        if (updatedProduct.isPromo && updatedProduct.originalPrice && updatedProduct.originalPrice <= updatedProduct.price) {
+          throw new Error('Original price must be higher than promo price');
+        }
+      }
+      
+      const updatedProducts = products.map(product =>
+        product.id === id ? { ...product, ...updates } : product
+      );
+      setProducts(updatedProducts); // Update state immediately
+      localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
+      
+      // Trigger storage event manually for other components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'shopEliteProducts',
+        newValue: JSON.stringify(updatedProducts)
+      }));
+    } catch (error) {
+      console.error('Error updating product:', error);
+      throw error;
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    try {
+      const updatedProducts = products.filter(product => product.id !== id);
+      setProducts(updatedProducts); // Update state immediately
+      localStorage.setItem('shopEliteProducts', JSON.stringify(updatedProducts));
+      
+      // Trigger storage event manually for other components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'shopEliteProducts',
+        newValue: JSON.stringify(updatedProducts)
+      }));
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      throw error;
+    }
   };
 
   return {
